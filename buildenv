@@ -1,0 +1,100 @@
+# Update bump details accordingly. Use bump check to confirm.
+# bump: minja-version /MINJA_VERSION="(.*)"/ https://github.com/google/minja.git|semver:*
+# MINJA_VERSION="V.R.M" # Specify a stable release
+# export ZOPEN_STABLE_TAG="v${MINJA_VERSION}"
+
+export ZOPEN_BUILD_LINE="DEV"
+
+export ZOPEN_STABLE_URL="https://github.com/google/minja.git"  # Specify the stable build URL (either git or tarball)
+export ZOPEN_STABLE_DEPS="zoslib make cmake grep check_python" # Specify the stable build dependencies.
+
+export ZOPEN_DEV_URL="https://github.com/google/minja.git"   # Specify the dev build URL
+export ZOPEN_DEV_DEPS="zoslib make cmake grep check_python"  # Specify the dev build dependencies
+
+export ZOPEN_CATEGORIES="ai"
+
+export ZOPEN_RUNTIME_DEPS=""
+
+## Runtime system prerequisites; supply the name of the system pre-requisties.
+## Current available prerequisites: zos24 zos25 zos31 procfs (see https://github.com/zopencommunity/meta/blob/main/include/prereq.sh for a current list)
+export ZOPEN_SYSTEM_PREREQ=""
+
+export ZOPEN_COMP="CLANG"
+
+export ZOPEN_EXTRA_CPPFLAGS="-D_POSIX_C_SOURCE=200112L"
+
+export ZOPEN_CONFIGURE="cmake" ## Configuration program to run (defaults to './configure')
+export ZOPEN_CONFIGURE_OPTS="-B ../build --install-prefix \"\$ZOPEN_INSTALL_DIR/\" -DPython_EXECUTABLE=\"\$PYTHON_VENV_PATH\" ."
+
+export ZOPEN_MAKE="cmake"      ## Build program to run (defaults to 'make')
+export ZOPEN_MAKE_OPTS=" --build ../build --parallel \$ZOPEN_NUM_JOBS --target all"
+
+export ZOPEN_INSTALL="cmake"
+export ZOPEN_INSTALL_OPTS=" --install ../build "
+
+export ZOPEN_CHECK="ctest"
+export ZOPEN_CHECK_OPTS="--test-dir ../build -j --output-on-failure"
+
+###
+### Required user-supplied functions
+###
+
+zopen_check_results()
+{
+  dir="$1"
+  pfx="$2"
+  chk="$1/$2_check.log"
+
+  if [[ -f "$chk" ]]; then
+    total=$(grep -cE "[0-9]+/[0-9]+ Test" "$chk")
+    failed=$(grep -cE "\*\*\*Failed" "$chk")
+    skipped=$(grep -cE "\*\*\*Skipped" "$chk")
+    passed=$((total-failed-skipped))
+  else
+    total=0
+    passed=0
+    failed=0
+    skipped=0
+  fi
+
+  # Echo the following information to gauge build health
+  echo "actualFailures:$failed"
+  echo "totalTests:$total"
+  echo "expectedFailures:0"
+  echo "expectedTotalTests:$total"
+}
+
+zopen_init()
+{
+if [ -n "*$VIRTUAL_ENV" ]; then
+    echo "Found $VIRTUAL_ENV..."
+    echo "Deactivating $VIRTUAL_ENV..."
+    deactivate
+fi
+
+if [ ! -d "minja_venv" ]; then
+    echo "Creating Python virtual environment"
+    python3 -m venv minja_venv
+fi
+
+. ./minja_venv/bin/activate
+
+if [ -f "requirements.txt" ]; then
+    echo "Installing all required packeges"
+    pip install -r requirements.txt
+fi
+
+export PYTHON_VENV_PATH="$(pwd)/minja_venv/bin/python"
+}
+
+zopen_get_version()
+{
+  # Modify to echo the version of your tool/library
+  # Rather than hardcoding the version, obtain the version by running the tool/library
+  echo "1.0.0"
+}
+
+zopen_post_install()
+{
+    deactivate
+}
